@@ -1,0 +1,273 @@
+/* Premium Blue & White Theme */
+
+:root {
+  /* Color Palette */
+  --blue-900: #0f172a; /* Darkest, for text */
+  --blue-800: #1e293b;
+  --blue-600: #2563eb; /* Primary Vibrant Blue */
+  --blue-500: #3b82f6; /* Secondary/Accent Blue */
+  --blue-100: #dbeafe; /* Light active backgrounds */
+  --blue-50:  #eff6ff; /* Softest blue, for hover states */
+  --bg-app:   #f4f7fe; /* Very soft cool white/blue for app background */
+  
+  --text-main: var(--blue-900);
+  --text-muted: #64748b;
+  
+  --white: #ffffff;
+  --border-light: #e2e8f0;
+  
+  /* Bootstrap Overrides */
+  --bs-primary: var(--blue-600);
+  --bs-primary-rgb: 37, 99, 235;
+  --bs-body-font-family: 'Inter', system-ui, sans-serif;
+  --bs-heading-font-family: 'Outfit', system-ui, sans-serif;
+  --bs-body-bg: var(--bg-app);
+  --bs-body-color: var(--text-main);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: var(--bs-body-font-family);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-family: var(--bs-heading-font-family);
+  font-weight: 600;
+  color: var(--blue-900);
+  letter-spacing: -0.02em;
+}
+
+/* Base link reset */
+a {
+  text-decoration: none;
+  color: var(--blue-600);
+  transition: color 0.2s ease;
+}
+a:hover {
+  color: var(--blue-500);
+}
+
+/* Glassmorphism & Cards */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-soft {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+}
+
+/* Buttons */
+.btn-gradient {
+  background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-500) 100%);
+  color: var(--white);
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  padding: 0.5rem 1.25rem;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-gradient:hover {
+  background: linear-gradient(135deg, var(--blue-500) 0%, #60a5fa 100%);
+  color: var(--white);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-gradient:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+/* Inputs */
+.input-stylish {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  color: var(--text-main);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+  font-family: var(--bs-body-font-family);
+}
+
+.input-stylish:focus, .form-control:focus {
+  border-color: var(--blue-500) !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+  outline: none;
+  background-color: var(--white) !important;
+}
+
+/* Sidebar Links */
+.sidebar-link {
+  color: var(--text-muted);
+  border-radius: 0.5rem;
+  padding: 0.6rem 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-link:hover {
+  background-color: var(--blue-50);
+  color: var(--blue-900);
+}
+
+.sidebar-link.active {
+  background-color: var(--blue-100);
+  color: var(--blue-600);
+  font-weight: 600;
+}
+
+.sidebar-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10%;
+  height: 80%;
+  width: 4px;
+  background-color: var(--blue-600);
+  border-radius: 0 4px 4px 0;
+}
+
+/* Animations */
+.fade-in-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hover-lift {
+  transition: transform 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Tables & Lists to look premium */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(239, 246, 255, 0.5); /* blue-50 with opacity */
+  --bs-table-hover-bg: var(--blue-50);
+}
+.table > :not(caption) > * > * {
+  border-bottom-color: var(--border-light);
+  padding: 1rem;
+}
+.table th {
+  font-family: var(--bs-heading-font-family);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom-width: 2px;
+}
+
+/* Fix for Bootstrap Icons disappearing when font-weight is inherited */
+.bi {
+  font-weight: normal !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  text-transform: none !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Auth Layout Utilities */
+.bg-glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.input-float {
+  transition: all 0.3s ease;
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: var(--text-main) !important;
+}
+
+.input-float:focus {
+  background-color: #fff !important;
+  border-color: var(--blue-600) !important;
+  box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.2) !important;
+  transform: translateY(-1px);
+}
+
+.btn-glow {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+  color: white !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3) !important;
+}
+
+.btn-glow:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4) !important;
+  color: white !important;
+}
+
+.auth-bg-img {
+  background-color: #0b0f19 !important;
+  background-image: url('/auth-bg.png') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
+

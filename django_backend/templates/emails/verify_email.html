@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Verify Your Email</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; padding: 40px; }
+    .btn { display: inline-block; background: #4f46e5; color: #fff; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 20px 0; }
+    .footer { color: #999; font-size: 12px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Hello, {{ name }}!</h2>
+    <p>Thank you for registering. Please verify your email address to complete your account setup.</p>
+    <a class="btn" href="{{ verify_link }}">Verify Email</a>
+    <p>This link expires in <strong>{{ expire_hours }} hours</strong>.</p>
+    <p>If you did not create an account, you can safely ignore this email.</p>
+    <div class="footer">© Extractor Platform</div>
+  </div>
+</body>
+</html>
