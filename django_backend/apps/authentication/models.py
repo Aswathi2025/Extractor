@@ -1,6 +1,5 @@
 """
-Authentication models: User (custom) and AuthToken.
-Mirrors the Sequelize user.js and authToken.js models.
+Authentication models: User (custom) and OTP.
 """
 import uuid
 from django.db import models
@@ -20,11 +19,6 @@ class EntityStatus(models.TextChoices):
     BLOCKED = 'BLOCKED', 'Blocked'
     INACTIVE = 'INACTIVE', 'Inactive'
     DELETED = 'DELETED', 'Deleted'
-
-
-class TokenType(models.TextChoices):
-    VERIFY_EMAIL = 'verify_email', 'Verify Email'
-    RESET_PASSWORD = 'reset_password', 'Reset Password'
 
 
 # ── User Manager ─────────────────────────────────────────────────────────────
@@ -55,7 +49,6 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     """
     Custom User model that replaces the default Django User.
-    Mirrors the Sequelize User model (user.js).
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=150, unique=True)
@@ -91,28 +84,23 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f'{self.username} <{self.email}>'
 
 
-# ── AuthToken Model ──────────────────────────────────────────────────────────
+# ── OTP Model ────────────────────────────────────────────────────────────────
 
-class AuthToken(models.Model):
+class OTP(models.Model):
     """
-    Stores email-verification and password-reset tokens.
-    Mirrors authToken.js.
+    Stores OTP codes for email verification and password reset.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    token = models.CharField(max_length=128, unique=True)
+    otp = models.CharField(max_length=6)
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='auth_tokens', db_column='user_id'
+        User, on_delete=models.CASCADE, related_name='otps', db_column='user_id'
     )
-    type = models.CharField(max_length=20, choices=TokenType.choices)
     expires_at = models.DateTimeField()
-    status = models.CharField(
-        max_length=20, choices=EntityStatus.choices, default=EntityStatus.ACTIVE
-    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'auth_tokens'
+        db_table = 'otps'
 
     def __str__(self):
-        return f'{self.type} token for {self.user_id}'
+        return f'OTP for {self.user_id}'

@@ -1,6 +1,5 @@
 """
 Authentication API views.
-Mirrors the Node.js controller.js and index.js (routes).
 All responses set JWT tokens in HTTP-only cookies.
 """
 import logging
@@ -11,12 +10,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
+from drf_spectacular.utils import extend_schema
 
 from .serializers import (
     RegisterSerializer,
     LoginSerializer,
-    VerifyEmailSerializer,
+    VerifyOTPSerializer,
+    ResendOTPSerializer,
     ForgotPasswordSerializer,
     ResetPasswordSerializer,
     ChangePasswordSerializer,
@@ -24,7 +24,8 @@ from .serializers import (
 from .services import (
     login_user,
     register_user,
-    verify_email_service,
+    verify_otp_service,
+    resend_otp_service,
     forgot_password_service,
     reset_password_service,
     change_password_service,
@@ -71,7 +72,7 @@ class RegisterView(APIView):
         try:
             result = register_user(serializer.validated_data)
             return Response(
-                {'success': True, 'message': 'Registration successful. Please verify your email.', 'data': result},
+                {'success': True, 'message': 'Registration successful. OTP sent to email.', 'data': result},
                 status=status.HTTP_201_CREATED,
             )
         except ValueError as e:
@@ -108,28 +109,46 @@ class LoginView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class VerifyEmailView(APIView):
-    """POST /api/v1/auth/verify-email"""
+class VerifyOTPView(APIView):
+    """POST /api/v1/auth/verify-otp"""
     permission_classes = [AllowAny]
 
-    @extend_schema(request=VerifyEmailSerializer)
+    @extend_schema(request=VerifyOTPSerializer)
     def post(self, request):
-        serializer = VerifyEmailSerializer(data=request.data)
+        serializer = VerifyOTPSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         try:
-            tokens = verify_email_service(serializer.validated_data)
+            result = verify_otp_service(serializer.validated_data)
+            tokens = result['tokens']
             response = Response(
                 {
                     'success': True,
                     'message': 'Email verified successfully.',
                     'accessToken': tokens['access'],
                     'refreshToken': tokens['refresh'],
+                    'data': result['user'],
                 },
                 status=status.HTTP_200_OK,
             )
             _set_jwt_cookies(response, tokens['access'], tokens['refresh'])
             return response
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResendOTPView(APIView):
+    """POST /api/v1/auth/resend-otp"""
+    permission_classes = [AllowAny]
+
+    @extend_schema(request=ResendOTPSerializer)
+    def post(self, request):
+        serializer = ResendOTPSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            result = resend_otp_service(serializer.validated_data)
+            return Response({'success': True, **result}, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -192,7 +211,6 @@ class LogoutView(APIView):
         description="Logout by clearing JWT cookies and blacklisting the refresh token."
     )
     def post(self, request):
-        # Blacklist the refresh token
         refresh_token = request.COOKIES.get(settings.JWT_REFRESH_COOKIE) or request.data.get('refresh')
         if refresh_token:
             try:

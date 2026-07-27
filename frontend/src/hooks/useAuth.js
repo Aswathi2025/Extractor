@@ -23,21 +23,50 @@ export const useLogin = () => {
       }
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Login failed');
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Login failed');
     },
   });
 };
 
-export const useRegister = () => {
-  const navigate = useNavigate();
+export const useRegister = (options = {}) => {
   return useMutation({
     mutationFn: authApi.register,
-    onSuccess: () => {
-      toast.success('Registered! Please check your email to verify your account.');
+    onSuccess: (res) => {
+      toast.success('Registration successful! Please enter the OTP sent to your email.');
+      if (options.onSuccess) options.onSuccess(res);
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Registration failed');
+    },
+  });
+};
+
+export const useVerifyOTP = () => {
+  const { login } = useAuthStore();
+  const navigate = useNavigate();
+  return useMutation({
+    mutationFn: authApi.verifyOTP,
+    onSuccess: ({ data }) => {
+      if (data.accessToken && data.data) {
+        login(data.data, data.accessToken);
+      }
+      toast.success('Email verified successfully!');
       navigate('/login');
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Registration failed');
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'OTP verification failed');
+    },
+  });
+};
+
+export const useResendOTP = () => {
+  return useMutation({
+    mutationFn: authApi.resendOTP,
+    onSuccess: () => {
+      toast.success('New OTP sent to your email!');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to resend OTP');
     },
   });
 };
@@ -53,7 +82,7 @@ export const useVerifyEmail = () => {
       navigate('/login');
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Verification failed');
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Verification failed');
     },
   });
 };
@@ -61,8 +90,8 @@ export const useVerifyEmail = () => {
 export const useForgotPassword = () =>
   useMutation({
     mutationFn: authApi.forgotPassword,
-    onSuccess: () => toast.success('Reset link sent! Check your email.'),
-    onError: (err) => toast.error(err.response?.data?.message || 'Request failed'),
+    onSuccess: () => toast.success('Reset OTP sent! Check your email.'),
+    onError: (err) => toast.error(err.response?.data?.error || err.response?.data?.message || 'Request failed'),
   });
 
 export const useResetPassword = () => {
@@ -73,6 +102,6 @@ export const useResetPassword = () => {
       toast.success('Password reset successfully!');
       navigate('/login');
     },
-    onError: (err) => toast.error(err.response?.data?.message || 'Reset failed'),
+    onError: (err) => toast.error(err.response?.data?.error || err.response?.data?.message || 'Reset failed'),
   });
 };

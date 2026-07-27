@@ -28,8 +28,25 @@ class LoginSerializer(serializers.Serializer):
     remember_me = serializers.BooleanField(default=False, required=False)
 
 
-class VerifyEmailSerializer(serializers.Serializer):
-    token = serializers.CharField()
+class VerifyOTPSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField(required=False)
+    email = serializers.EmailField(required=False)
+    otp = serializers.CharField(max_length=6, min_length=6)
+
+    def validate(self, attrs):
+        if not attrs.get('user_id') and not attrs.get('email'):
+            raise serializers.ValidationError('Either user_id or email must be provided.')
+        return attrs
+
+
+class ResendOTPSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField(required=False)
+    email = serializers.EmailField(required=False)
+
+    def validate(self, attrs):
+        if not attrs.get('user_id') and not attrs.get('email'):
+            raise serializers.ValidationError('Either user_id or email must be provided.')
+        return attrs
 
 
 class ForgotPasswordSerializer(serializers.Serializer):
@@ -37,7 +54,8 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 
 class ResetPasswordSerializer(serializers.Serializer):
-    token = serializers.CharField()
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6, min_length=6)
     new_password = serializers.CharField(write_only=True, min_length=6)
     confirm_password = serializers.CharField(write_only=True)
 

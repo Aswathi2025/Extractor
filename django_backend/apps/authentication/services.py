@@ -1,17 +1,15 @@
 """
-Authentication service layer.
-Mirrors the Node.js service.js logic: loginUser, registerUser, verifyEmail,
-forgotPassword, resetPassword, changePassword.
+Authentication service layer using OTP for verification and password reset.
 """
-import secrets
 import logging
 from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import User, AuthToken, EntityStatus, TokenType, UserRole
+from .models import User, OTP, EntityStatus, UserRole
 from utils.email_utils import send_email
+from utils.otp_utils import generate_otp
 
 logger = logging.getLogger(__name__)
 
@@ -53,31 +51,29 @@ def login_user(data):
     }
 
 
-def _send_verification_email(user):
-    """Generate a verify-email token and dispatch the email."""
-    token = secrets.token_hex(32)
-    expire_hours = settings.VERIFICATION_EXPIRE_HOURS
-    expires_at = timezone.now() + timedelta(hours=expire_hours)
+def _send_verification_otp(user):
+    """Generate a 6-digit OTP with 5 minutes expiration and send email."""
+    # Delete old OTPs for this user
+    OTP.objects.filter(user=user).delete()
 
-    AuthToken.objects.create(
-        token=token,
+    otp_code = generate_otp(6)
+    expires_at = timezone.now() + timedelta(minutes=5)
+
+    OTP.objects.create(
         user=user,
-        type=TokenType.VERIFY_EMAIL,
+        otp=otp_code,
         expires_at=expires_at,
     )
-
-    frontend_url = settings.FRONTEND_URL
-    verify_link = f'{frontend_url}/verify-email?token={token}'
 
     try:
         send_email(
             to=user.email,
-            subject='Verify Your Email — Extractor',
+            subject='Verify Your Email — OTP Code',
             template='verify_email.html',
             context={
                 'name': user.username,
-                'verify_link': verify_link,
-                'expire_hours': expire_hours,
+                'otp': otp_code,
+                'expire_minutes': 5,
             },
         )
     except Exception as e:
@@ -85,7 +81,7 @@ def _send_verification_email(user):
 
 
 def register_user(data):
-    """Register a new candidate user and send verification email."""
+    """Register a new candidate user and send verification OTP."""
     name = data['name']
     email = data['email']
     password = data['password']
@@ -94,6 +90,14 @@ def register_user(data):
         existing = User.objects.get(email=email)
         if existing.status == EntityStatus.BLOCKED:
             raise ValueError('This account is blocked. Please contact support.')
+        if not existing.is_verified:
+            # If user exists but is unverified, re-send OTP
+            _send_verification_otp(existing)
+            return {
+                'id': str(existing.id),
+                'email': existing.email,
+                'name': existing.username,
+            }
         raise ValueError('This user already exists.')
 
     user = User.objects.create_user(
@@ -105,7 +109,7 @@ def register_user(data):
         is_verified=False,
     )
 
-    _send_verification_email(user)
+    _send_verification_otp(user)
 
     return {
         'id': str(user.id),
@@ -114,39 +118,77 @@ def register_user(data):
     }
 
 
-def verify_email_service(data):
-    """Verify user email using a token."""
-    token_str = data['token']
+def verify_otp_service(data):
+    """Verify user email using OTP."""
+    user_id = data.get('user_id')
+    email = data.get('email')
+    otp_code = data.get('otp')
 
     try:
-        auth_token = AuthToken.objects.select_related('user').get(
-            token=token_str,
-            type=TokenType.VERIFY_EMAIL,
-            status=EntityStatus.ACTIVE,
-        )
-    except AuthToken.DoesNotExist:
-        raise ValueError('Invalid or expired token.')
+        if user_id:
+            user = User.objects.get(id=user_id)
+        elif email:
+            user = User.objects.get(email=email)
+        else:
+            raise ValueError('User identifier is missing.')
+    except User.DoesNotExist:
+        raise ValueError('User not found.')
 
-    if auth_token.expires_at < timezone.now():
-        raise ValueError('Invalid or expired token.')
-
-    user = auth_token.user
     if user.status == EntityStatus.BLOCKED:
         raise ValueError('This account is blocked.')
+
+    otp_record = OTP.objects.filter(user=user, otp=otp_code).first()
+
+    if not otp_record:
+        raise ValueError('Invalid OTP code.')
+
+    if otp_record.expires_at < timezone.now():
+        otp_record.delete()
+        raise ValueError('OTP has expired. Please request a new one.')
 
     user.is_verified = True
     user.status = EntityStatus.ACTIVE
     user.save(update_fields=['is_verified', 'status'])
 
-    auth_token.status = EntityStatus.DELETED
-    auth_token.save(update_fields=['status'])
+    # Clear all OTPs for user once verified
+    OTP.objects.filter(user=user).delete()
 
     tokens = get_tokens_for_user(user)
-    return tokens
+    return {
+        'tokens': tokens,
+        'user': {
+            'id': str(user.id),
+            'email': user.email,
+            'name': user.username,
+            'role': user.role,
+        }
+    }
+
+
+def resend_otp_service(data):
+    """Resend OTP code to user's email."""
+    user_id = data.get('user_id')
+    email = data.get('email')
+
+    try:
+        if user_id:
+            user = User.objects.get(id=user_id)
+        elif email:
+            user = User.objects.get(email=email)
+        else:
+            raise ValueError('User identifier is missing.')
+    except User.DoesNotExist:
+        raise ValueError('User not found.')
+
+    if user.is_verified:
+        raise ValueError('User email is already verified.')
+
+    _send_verification_otp(user)
+    return {'message': 'OTP resent successfully to your email.'}
 
 
 def forgot_password_service(data):
-    """Initiate password reset — generate token and send email."""
+    """Initiate password reset — generate 5-min OTP and send email."""
     email = data['email']
 
     try:
@@ -154,65 +196,59 @@ def forgot_password_service(data):
     except User.DoesNotExist:
         raise ValueError('User not found.')
 
-    token = secrets.token_hex(32)
-    expire_minutes = settings.PASSWORD_RESET_EXPIRE_MINUTES
-    expires_at = timezone.now() + timedelta(minutes=expire_minutes)
+    OTP.objects.filter(user=user).delete()
 
-    AuthToken.objects.create(
-        token=token,
+    otp_code = generate_otp(6)
+    expires_at = timezone.now() + timedelta(minutes=5)
+
+    OTP.objects.create(
         user=user,
-        type=TokenType.RESET_PASSWORD,
+        otp=otp_code,
         expires_at=expires_at,
     )
-
-    frontend_url = settings.FRONTEND_URL
-    reset_link = f'{frontend_url}/reset-password?token={token}'
 
     try:
         send_email(
             to=user.email,
-            subject='Password Reset Request — Extractor',
+            subject='Password Reset OTP — Extractor',
             template='forgot_password.html',
             context={
                 'name': user.username,
-                'reset_link': reset_link,
-                'expire_minutes': expire_minutes,
+                'otp': otp_code,
+                'expire_minutes': 5,
             },
         )
     except Exception as e:
         logger.error(f'Reset email failed for {user.email}: {e}')
         raise ValueError('Failed to send reset email.')
 
-    return {'message': 'Password reset link sent to email.'}
+    return {'message': 'Password reset OTP sent to email.'}
 
 
 def reset_password_service(data):
-    """Reset user password using a valid reset token."""
-    token_str = data['token']
+    """Reset user password using a valid OTP code."""
+    email = data['email']
+    otp_code = data['otp']
     new_password = data['new_password']
-    confirm_password = data['confirm_password']
-
-    if new_password != confirm_password:
-        raise ValueError('Passwords do not match.')
 
     try:
-        auth_token = AuthToken.objects.select_related('user').get(
-            token=token_str,
-            type=TokenType.RESET_PASSWORD,
-            status=EntityStatus.ACTIVE,
-        )
-    except AuthToken.DoesNotExist:
-        raise ValueError('Invalid or expired token.')
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        raise ValueError('User not found.')
 
-    if auth_token.expires_at < timezone.now():
-        raise ValueError('Invalid or expired token.')
+    otp_record = OTP.objects.filter(user=user, otp=otp_code).first()
 
-    user = auth_token.user
+    if not otp_record:
+        raise ValueError('Invalid OTP code.')
+
+    if otp_record.expires_at < timezone.now():
+        otp_record.delete()
+        raise ValueError('OTP has expired. Please request a new one.')
+
     user.set_password(new_password)
     user.save(update_fields=['password'])
 
-    auth_token.status = EntityStatus.DELETED
-    auth_token.save(update_fields=['status'])
+    OTP.objects.filter(user=user).delete()
 
     return {'message': 'Password reset successfully.'}
 
