@@ -10,6 +10,7 @@ class QuestionType(models.TextChoices):
 
 class Question(models.Model):
     """Mirrors question.js — questions table."""
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     type = models.CharField(
         max_length=20, choices=QuestionType.choices, default=QuestionType.MCQ

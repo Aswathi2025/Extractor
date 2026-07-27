@@ -13,6 +13,7 @@ class TestType(models.TextChoices):
 
 class Test(models.Model):
     """Mirrors test.js — tests table."""
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     test_type = models.CharField(
         max_length=20, choices=TestType.choices, default=TestType.APTITUDE
@@ -40,6 +41,7 @@ class Test(models.Model):
 
 class TestAnswer(models.Model):
     """Mirrors testAnswer.js — test_answers table."""
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     test = models.ForeignKey(
         Test, on_delete=models.CASCADE, related_name='answers', db_column='test_id'

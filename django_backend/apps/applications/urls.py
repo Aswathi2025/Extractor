@@ -8,6 +8,7 @@ from .views import (
     ApplicationListView,
     ApplicationDetailView,
     UpdateApplicationStatusView,
+    ResendApplicationEmailView,
 )
 
 urlpatterns = [
@@ -18,4 +19,5 @@ urlpatterns = [
     path('upload-resume', UploadResumeView.as_view(), name='application-upload-resume'),
     path('<uuid:pk>/', ApplicationDetailView.as_view(), name='application-detail'),
     path('<uuid:pk>/status/', UpdateApplicationStatusView.as_view(), name='application-status-update'),
+    path('<uuid:pk>/resend-email/', ResendApplicationEmailView.as_view(), name='application-resend-email'),
 ]

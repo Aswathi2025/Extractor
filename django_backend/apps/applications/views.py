@@ -3,6 +3,7 @@ Applications app — serializers, views, and URLs.
 Mirrors applications/controller.js and applications/index.js.
 """
 import logging
+import threading
 from rest_framework import serializers, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -338,18 +339,19 @@ class UpdateApplicationStatusView(APIView):
                         TestAnswer(test=test, question=q) for q in questions
                     ])
 
-        # Dispatch email notification for candidate status update
-        self._send_status_email(app)
+        # Dispatch email notification asynchronously in background thread
+        threading.Thread(target=self._send_status_email, args=(app,), daemon=True).start()
 
         return Response({'message': 'Application status updated.', 'status': app.status})
 
     def _send_status_email(self, app):
         candidate = app.user
-        job_title = app.job_role.title if app.job_role else 'Applied Position'
+        job_title = app.job_role.title if (app.job_role and app.job_role.title) else 'Applied Position'
         frontend_url = settings.FRONTEND_URL
 
         try:
-            if app.status == ApplicationStatus.APTITUDE_ROUND:
+            status_str = str(app.status)
+            if status_str == ApplicationStatus.APTITUDE_ROUND or status_str == 'aptitude_round':
                 send_email(
                     to=candidate.email,
                     subject='Aptitude Round Invitation — Extractor',
@@ -360,7 +362,7 @@ class UpdateApplicationStatusView(APIView):
                         'dashboard_url': f'{frontend_url}/tests',
                     }
                 )
-            elif app.status == ApplicationStatus.TECHNICAL_ROUND:
+            elif status_str == ApplicationStatus.TECHNICAL_ROUND or status_str == 'technical_round':
                 send_email(
                     to=candidate.email,
                     subject='Technical Round Invitation — Extractor',
@@ -371,7 +373,7 @@ class UpdateApplicationStatusView(APIView):
                         'dashboard_url': f'{frontend_url}/tests',
                     }
                 )
-            elif app.status == ApplicationStatus.FACE_TO_FACE_INTERVIEW:
+            elif status_str == ApplicationStatus.FACE_TO_FACE_INTERVIEW or status_str == 'face_to_face_interview':
                 send_email(
                     to=candidate.email,
                     subject='Face-to-Face Interview Schedule — Extractor',
@@ -384,7 +386,7 @@ class UpdateApplicationStatusView(APIView):
                         'interview_location': app.interview_location or 'Abc company chennai',
                     }
                 )
-            elif app.status == ApplicationStatus.ACCEPTED:
+            elif status_str == ApplicationStatus.ACCEPTED or status_str == 'accepted':
                 send_email(
                     to=candidate.email,
                     subject='Congratulations! Application Accepted — Extractor',
@@ -395,5 +397,34 @@ class UpdateApplicationStatusView(APIView):
                     }
                 )
         except Exception as e:
-            logger.error(f'Status update email failed for {candidate.email}: {e}')
+            logger.exception(f'Status update email failed for {candidate.email}: {e}')
+
+
+class ResendApplicationEmailView(APIView):
+    """POST /api/v1/applications/<id>/resend-email/ — admin resend status email"""
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def post(self, request, pk):
+        try:
+            app = Application.objects.select_related('user', 'job_role').get(pk=pk)
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        status_str = str(app.status)
+        if status_str not in [
+            ApplicationStatus.APTITUDE_ROUND,
+            ApplicationStatus.TECHNICAL_ROUND,
+            ApplicationStatus.FACE_TO_FACE_INTERVIEW,
+            ApplicationStatus.ACCEPTED,
+            'aptitude_round',
+            'technical_round',
+            'face_to_face_interview',
+            'accepted',
+        ]:
+            return Response({'error': f'No email notification configured for status: {app.status}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Dispatch email notification in background thread
+        threading.Thread(target=UpdateApplicationStatusView()._send_status_email, args=(app,), daemon=True).start()
+        return Response({'message': f'Email notification re-sent to {app.user.email}'})
+
 

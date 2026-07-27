@@ -54,8 +54,8 @@ export const useApplyForJob = () => {
 export const useUpdateApplicationStatus = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status, interview_date, interview_time, silent }) => 
-      applicationsApi.updateApplicationStatus(id, { status, interview_date, interview_time }),
+    mutationFn: ({ id, status, interview_date, interview_time, interview_location, silent }) => 
+      applicationsApi.updateApplicationStatus(id, { status, interview_date, interview_time, interview_location }),
     onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: ['applications'] });
       qc.invalidateQueries({ queryKey: ['application', variables.id] });
@@ -82,6 +82,18 @@ export const useDeleteApplication = () => {
     },
     onError: (err) => {
       toast.error(err.response?.data?.message || 'Failed to delete application');
+    }
+  });
+};
+
+export const useResendApplicationEmail = () => {
+  return useMutation({
+    mutationFn: applicationsApi.resendApplicationEmail,
+    onSuccess: (data) => {
+      toast.success(data.data?.message || 'Notification email re-sent successfully');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to resend email notification');
     }
   });
 };

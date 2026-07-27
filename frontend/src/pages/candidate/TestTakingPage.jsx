@@ -60,7 +60,7 @@ const TestTakingPage = () => {
       return {
         answer_id: ans.id,
         selected_answer: stateAns.code ?? stateAns.selectedAnswer ?? ans.selected_answer ?? '',
-        language: stateAns.language ?? ans.language ?? ''
+        language: stateAns.language || ans.language || 'python'
       };
     });
 
@@ -78,8 +78,7 @@ const TestTakingPage = () => {
       const stateAns = answers[ans.id] || {};
       if (ans.question?.type === 'PROGRAMMING') {
         const code = stateAns.code ?? stateAns.selectedAnswer ?? ans.selected_answer ?? '';
-        const lang = stateAns.language ?? ans.language ?? '';
-        return code.trim().length > 0 && lang.trim().length > 0;
+        return code.trim().length > 0;
       } else {
         const selected = stateAns.selectedAnswer ?? ans.selected_answer ?? '';
         return selected.trim().length > 0;
@@ -159,11 +158,10 @@ const TestTakingPage = () => {
                       <label className="form-label small fw-bold text-dark">Select Language</label>
                       <select 
                         className="form-select bg-light border-light shadow-sm"
-                        value={answers[ans.id]?.language ?? ans.language ?? ''}
+                        value={answers[ans.id]?.language || ans.language || 'python'}
                         onChange={(e) => handleProgrammingChange(ans.id, 'language', e.target.value)}
                         style={{ maxWidth: '200px' }}
                       >
-                        <option value="" disabled>Choose...</option>
                         <option value="python">Python</option>
                         <option value="javascript">JavaScript</option>
                         <option value="c">C</option>

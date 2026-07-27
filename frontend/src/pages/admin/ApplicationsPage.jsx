@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApplications, useUpdateApplicationStatus, useApplication } from '../../hooks/useApplications';
+import { useApplications, useUpdateApplicationStatus, useApplication, useResendApplicationEmail } from '../../hooks/useApplications';
 import { useUserResume } from '../../hooks/useUsers';
 import { useAdminTestById, useEvaluateTest } from '../../hooks/useTests';
 import Modal from '../../components/ui/Modal';
@@ -11,6 +11,7 @@ const ApplicationsPage = () => {
   
   const { data: response, isLoading, isError } = useApplications({ page, limit: 10, search, sortBy: 'updated_at', sortOrder: 'DESC' });
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateApplicationStatus();
+  const { mutate: resendEmail, isPending: isResendingEmail } = useResendApplicationEmail();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -18,6 +19,7 @@ const ApplicationsPage = () => {
   const [resumeTab, setResumeTab] = useState('parsed');
   const [interviewDate, setInterviewDate] = useState('');
   const [interviewTime, setInterviewTime] = useState('');
+  const [interviewLocation, setInterviewLocation] = useState('Abc company chennai');
 
   const { data: fetchedAppDetails, isFetching: isFetchingAppDetails } = useApplication(selectedApplication?.id);
   const { data: resumeData, refetch: fetchResume, isFetching: isFetchingResume } = useUserResume(selectedApplication?.candidate_id);
@@ -48,6 +50,7 @@ const ApplicationsPage = () => {
     setConfirmAction(null);
     setInterviewDate('');
     setInterviewTime('');
+    setInterviewLocation('Abc company chennai');
     setIsModalOpen(true);
     
     // Auto-update to reviewed if pending
@@ -77,6 +80,7 @@ const ApplicationsPage = () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       setInterviewDate(tomorrow.toISOString().split('T')[0]);
       setInterviewTime('10:00');
+      setInterviewLocation('Abc company chennai');
     }
   };
 
@@ -95,7 +99,8 @@ const ApplicationsPage = () => {
         status: confirmAction,
         ...(confirmAction === 'face_to_face_interview' && {
           interview_date: interviewDate,
-          interview_time: interviewTime
+          interview_time: interviewTime,
+          interview_location: interviewLocation || 'Abc company chennai'
         })
       },
       {
@@ -276,7 +281,7 @@ const ApplicationsPage = () => {
                     required
                   />
                 </div>
-                <div>
+                <div className="mb-3">
                   <label className="form-label small fw-medium">Interview Time <span className="text-danger">*</span></label>
                   <input 
                     type="time" 
@@ -284,6 +289,16 @@ const ApplicationsPage = () => {
                     value={interviewTime}
                     onChange={(e) => setInterviewTime(e.target.value)}
                     required
+                  />
+                </div>
+                <div>
+                  <label className="form-label small fw-medium">Interview Location</label>
+                  <input 
+                    type="text" 
+                    className="form-control form-control-sm border shadow-none" 
+                    placeholder="e.g. Abc company chennai"
+                    value={interviewLocation}
+                    onChange={(e) => setInterviewLocation(e.target.value)}
                   />
                 </div>
               </div>
@@ -333,12 +348,27 @@ const ApplicationsPage = () => {
 
                   <div className="pt-3 border-top bg-white p-3 rounded-3 shadow-sm border border-light">
                     <div className="text-muted small mb-2 fw-medium text-uppercase tracking-wider">Application Status</div>
-                    <div className="d-flex justify-content-between align-items-center">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
                       {getStatusBadge(activeApp.status)}
                       <div className="text-muted small">
                         <i className="bi bi-calendar3 me-1"></i>{moment(activeApp.applied_at).format('MMM DD, YYYY')}
                       </div>
                     </div>
+                    {['aptitude_round', 'technical_round', 'face_to_face_interview', 'accepted'].includes(activeApp.status) && (
+                      <div className="pt-2 border-top mt-2">
+                        <button 
+                          className="btn btn-sm btn-outline-secondary rounded-pill w-100 fw-medium d-flex align-items-center justify-content-center gap-2"
+                          onClick={() => resendEmail(activeApp.id)}
+                          disabled={isResendingEmail}
+                        >
+                          {isResendingEmail ? (
+                            <><span className="spinner-border spinner-border-sm" role="status"></span>Sending...</>
+                          ) : (
+                            <><i className="bi bi-envelope-at me-1"></i>Resend Stage Email</>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 

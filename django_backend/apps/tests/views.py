@@ -102,7 +102,11 @@ class TestDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            test = Test.objects.select_related('application__job_role').get(pk=pk, user=request.user)
+            is_admin_user = (getattr(request.user, 'role', '') == 'ADMIN') or getattr(request.user, 'is_staff', False)
+            if is_admin_user:
+                test = Test.objects.select_related('application__job_role').get(pk=pk)
+            else:
+                test = Test.objects.select_related('application__job_role').get(pk=pk, user=request.user)
         except Test.DoesNotExist:
             return Response({'error': 'Test not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -145,7 +149,11 @@ class SubmitTestView(APIView):
 
     def put(self, request, pk):
         try:
-            test = Test.objects.get(pk=pk, user=request.user)
+            is_admin_user = (getattr(request.user, 'role', '') == 'ADMIN') or getattr(request.user, 'is_staff', False)
+            if is_admin_user:
+                test = Test.objects.get(pk=pk)
+            else:
+                test = Test.objects.get(pk=pk, user=request.user)
         except Test.DoesNotExist:
             return Response({'error': 'Test not found.'}, status=status.HTTP_404_NOT_FOUND)
 

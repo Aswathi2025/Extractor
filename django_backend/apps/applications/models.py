@@ -19,6 +19,7 @@ class ApplicationStatus(models.TextChoices):
 
 class Resume(models.Model):
     """Mirrors resume.js — resumes table."""
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='resumes', db_column='user_id'
@@ -36,6 +37,7 @@ class Resume(models.Model):
 
 class ResumeAnalysis(models.Model):
     """Mirrors resumeAnalysis.js — resume_analyses table. JSONB → JSONField."""
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     resume = models.OneToOneField(
         Resume, on_delete=models.CASCADE, related_name='analysis', db_column='resume_id'
@@ -64,6 +66,7 @@ class ResumeAnalysis(models.Model):
 
 class Application(models.Model):
     """Mirrors application.js — applications table."""
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='applications', db_column='user_id'

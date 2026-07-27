@@ -7,6 +7,7 @@ from apps.skills.models import Skill
 
 class JobRole(models.Model):
     """Mirrors jobRole.js — job_roles table."""
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -42,6 +43,7 @@ class JobRole(models.Model):
 
 class JobRequiredSkill(models.Model):
     """Through table for JobRole ↔ Skill M2M. Mirrors jobRequiredSkill.js."""
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     job = models.ForeignKey(JobRole, on_delete=models.CASCADE, db_column='job_id')
     skill = models.ForeignKey(Skill, on_delete=models.CASCADE, db_column='skill_id')

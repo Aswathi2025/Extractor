@@ -23,3 +23,7 @@ export const updateApplicationStatus = (id, payload) => {
 export const deleteApplication = (id) => {
   return axiosInstance.delete(`/applications/${id}`);
 };
+
+export const resendApplicationEmail = (id) => {
+  return axiosInstance.post(`/applications/${id}/resend-email/`);
+};

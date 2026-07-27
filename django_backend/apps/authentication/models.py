@@ -90,6 +90,7 @@ class OTP(models.Model):
     """
     Stores OTP codes for email verification and password reset.
     """
+    objects = models.Manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     otp = models.CharField(max_length=6)
     user = models.ForeignKey(
