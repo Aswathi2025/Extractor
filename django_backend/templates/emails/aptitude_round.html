@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Aptitude Round Invitation</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; margin: 0; padding: 0; }
+    .container { max-width: 550px; margin: 40px auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .btn { display: inline-block; background: #4f46e5; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; margin-top: 20px; }
+    .footer { color: #888; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="color: #1e293b; margin-top: 0;">Congratulations, {{ name }}!</h2>
+    <p style="color: #475569; font-size: 15px; line-height: 1.6;">Your application for the position of <strong>{{ job_title }}</strong> at <strong>Abc company</strong> has moved to the <strong>Aptitude Round</strong>.</p>
+    <p style="color: #475569; font-size: 15px; line-height: 1.6;">Please log into your candidate dashboard to complete your Aptitude assessment test at your earliest convenience.</p>
+    <a class="btn" href="{{ dashboard_url }}">Go to Dashboard</a>
+    <div class="footer">© Abc Company | Extractor Platform</div>
+  </div>
+</body>
+</html>

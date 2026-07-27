@@ -18,10 +18,12 @@ from apps.skills.models import Skill
 from apps.tests.models import Test, TestAnswer, TestType
 from apps.questions.models import Question, QuestionType
 from apps.tests.views import TestSerializer
+from django.conf import settings
 from utils.pagination import StandardPagination
 from utils.backblaze import upload_to_b2, generate_b2_presigned_url
 from utils.resume_parser import extract_text_from_file
 from utils.groq_utils import extract_resume_data, compute_match_score
+from utils.email_utils import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +71,9 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
 
 class ApplicationStatusUpdateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=ApplicationStatus.choices)
+    interview_date = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    interview_time = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    interview_location = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 # ── Views ─────────────────────────────────────────────────────────────────────
@@ -283,7 +288,7 @@ class UpdateApplicationStatusView(APIView):
 
     def put(self, request, pk):
         try:
-            app = Application.objects.get(pk=pk)
+            app = Application.objects.select_related('user', 'job_role').get(pk=pk)
         except Application.DoesNotExist:
             return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -292,7 +297,17 @@ class UpdateApplicationStatusView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         app.status = serializer.validated_data['status']
-        app.save(update_fields=['status'])
+        
+        if 'interview_date' in serializer.validated_data and serializer.validated_data['interview_date']:
+            app.interview_date = serializer.validated_data['interview_date']
+        if 'interview_time' in serializer.validated_data and serializer.validated_data['interview_time']:
+            app.interview_time = serializer.validated_data['interview_time']
+        if 'interview_location' in serializer.validated_data and serializer.validated_data['interview_location']:
+            app.interview_location = serializer.validated_data['interview_location']
+        elif not app.interview_location:
+            app.interview_location = 'Abc company chennai'
+
+        app.save()
 
         # Auto-generate tests if advancing to testing rounds
         if app.status == ApplicationStatus.APTITUDE_ROUND:
@@ -323,4 +338,62 @@ class UpdateApplicationStatusView(APIView):
                         TestAnswer(test=test, question=q) for q in questions
                     ])
 
+        # Dispatch email notification for candidate status update
+        self._send_status_email(app)
+
         return Response({'message': 'Application status updated.', 'status': app.status})
+
+    def _send_status_email(self, app):
+        candidate = app.user
+        job_title = app.job_role.title if app.job_role else 'Applied Position'
+        frontend_url = settings.FRONTEND_URL
+
+        try:
+            if app.status == ApplicationStatus.APTITUDE_ROUND:
+                send_email(
+                    to=candidate.email,
+                    subject='Aptitude Round Invitation — Extractor',
+                    template='aptitude_round.html',
+                    context={
+                        'name': candidate.username,
+                        'job_title': job_title,
+                        'dashboard_url': f'{frontend_url}/tests',
+                    }
+                )
+            elif app.status == ApplicationStatus.TECHNICAL_ROUND:
+                send_email(
+                    to=candidate.email,
+                    subject='Technical Round Invitation — Extractor',
+                    template='technical_round.html',
+                    context={
+                        'name': candidate.username,
+                        'job_title': job_title,
+                        'dashboard_url': f'{frontend_url}/tests',
+                    }
+                )
+            elif app.status == ApplicationStatus.FACE_TO_FACE_INTERVIEW:
+                send_email(
+                    to=candidate.email,
+                    subject='Face-to-Face Interview Schedule — Extractor',
+                    template='face_to_face_interview.html',
+                    context={
+                        'name': candidate.username,
+                        'job_title': job_title,
+                        'interview_date': app.interview_date or 'To be communicated',
+                        'interview_time': app.interview_time or 'To be communicated',
+                        'interview_location': app.interview_location or 'Abc company chennai',
+                    }
+                )
+            elif app.status == ApplicationStatus.ACCEPTED:
+                send_email(
+                    to=candidate.email,
+                    subject='Congratulations! Application Accepted — Extractor',
+                    template='candidate_selected.html',
+                    context={
+                        'name': candidate.username,
+                        'job_title': job_title,
+                    }
+                )
+        except Exception as e:
+            logger.error(f'Status update email failed for {candidate.email}: {e}')
+

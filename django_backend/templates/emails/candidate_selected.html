@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Application Accepted</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; margin: 0; padding: 0; }
+    .container { max-width: 550px; margin: 40px auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .congrats-box { background: #f0fdf4; border: 2px dashed #16a34a; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+    .footer { color: #888; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="color: #16a34a; margin-top: 0;">Congratulations, {{ name }}! 🎉</h2>
+    <div class="congrats-box">
+      <h3 style="color: #15803d; margin: 0;">You have been selected!</h3>
+      <p style="color: #166534; font-size: 15px; margin-top: 8px;">Role: <strong>{{ job_title }}</strong></p>
+    </div>
+    <p style="color: #475569; font-size: 15px; line-height: 1.6;">We are thrilled to inform you that your application for the <strong>{{ job_title }}</strong> position at <strong>Abc company</strong> has been accepted.</p>
+    <p style="color: #475569; font-size: 15px; line-height: 1.6;">Our HR team will reach out to you shortly with the formal offer letter and next steps.</p>
+    <div class="footer">© Abc Company | Extractor Platform</div>
+  </div>
+</body>
+</html>

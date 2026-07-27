@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Technical Round Invitation</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; margin: 0; padding: 0; }
+    .container { max-width: 550px; margin: 40px auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .btn { display: inline-block; background: #0284c7; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; margin-top: 20px; }
+    .footer { color: #888; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="color: #1e293b; margin-top: 0;">Great Job, {{ name }}!</h2>
+    <p style="color: #475569; font-size: 15px; line-height: 1.6;">You have successfully proceeded to the <strong>Technical Round</strong> for the role of <strong>{{ job_title }}</strong> at <strong>Abc company</strong>.</p>
+    <p style="color: #475569; font-size: 15px; line-height: 1.6;">Your programming test is now available on your candidate dashboard. Please log in and submit your test answers.</p>
+    <a class="btn" href="{{ dashboard_url }}">Take Technical Test</a>
+    <div class="footer">© Abc Company | Extractor Platform</div>
+  </div>
+</body>
+</html>

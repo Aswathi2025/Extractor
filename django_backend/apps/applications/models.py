@@ -82,6 +82,9 @@ class Application(models.Model):
         choices=ApplicationStatus.choices,
         default=ApplicationStatus.PENDING,
     )
+    interview_date = models.CharField(max_length=100, blank=True, null=True)
+    interview_time = models.CharField(max_length=100, blank=True, null=True)
+    interview_location = models.CharField(max_length=255, blank=True, null=True, default='Abc company chennai')
     applied_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
