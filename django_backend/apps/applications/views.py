@@ -15,6 +15,9 @@ from apps.authentication.models import User
 from apps.authentication.permissions import IsAdmin
 from apps.jobs.models import JobRole
 from apps.skills.models import Skill
+from apps.tests.models import Test, TestAnswer, TestType
+from apps.questions.models import Question, QuestionType
+from apps.tests.views import TestSerializer
 from utils.pagination import StandardPagination
 from utils.backblaze import upload_to_b2, generate_b2_presigned_url
 from utils.resume_parser import extract_text_from_file
@@ -28,18 +31,37 @@ logger = logging.getLogger(__name__)
 class ApplicationListSerializer(serializers.ModelSerializer):
     candidate_name = serializers.CharField(source='user.username', read_only=True)
     candidate_email = serializers.CharField(source='user.email', read_only=True)
+    candidate_id = serializers.UUIDField(source='user.id', read_only=True)
     job_title = serializers.CharField(source='job_role.title', read_only=True)
+    job_role_id = serializers.UUIDField(source='job_role.id', read_only=True)
+    min_experience = serializers.IntegerField(source='job_role.min_experience', read_only=True)
+    tests = TestSerializer(many=True, read_only=True)
 
     class Meta:
         model = Application
         fields = [
-            'id', 'candidate_name', 'candidate_email', 'job_title',
+            'id', 'candidate_name', 'candidate_email', 'candidate_id',
+            'job_role_id', 'job_title', 'min_experience',
             'match_score', 'matched_skills', 'missing_skills',
-            'status', 'applied_at', 'updated_at',
+            'status', 'applied_at', 'updated_at', 'tests',
         ]
 
 
+class JobRoleBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobRole
+        fields = ['id', 'title', 'min_experience']
+
+class UserBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
+
 class ApplicationDetailSerializer(serializers.ModelSerializer):
+    candidate = UserBasicSerializer(source='user', read_only=True)
+    job_role = JobRoleBasicSerializer(read_only=True)
+    tests = TestSerializer(many=True, read_only=True)
+
     class Meta:
         model = Application
         fields = '__all__'
@@ -96,7 +118,8 @@ class UploadResumeView(APIView):
 
         file_bytes = file.read()
 
-        # Upload to Backblaze B2
+        # Upload to Backblaze B2 (non-fatal: fall back to local key on failure)
+        b2_upload_ok = True
         try:
             key = upload_to_b2(
                 name=file.name,
@@ -105,8 +128,9 @@ class UploadResumeView(APIView):
                 custom_key=f'resumes/{request.user.id}/{file.name}',
             )
         except Exception as e:
-            logger.error(f'B2 upload failed: {e}')
-            return Response({'error': f'File upload failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f'B2 upload failed (continuing with local key): {e}')
+            key = f'resumes/{request.user.id}/{file.name}'
+            b2_upload_ok = False
 
         # Save resume record
         resume = Resume.objects.create(user=request.user, file=key)
@@ -143,7 +167,15 @@ class UploadResumeView(APIView):
         except Exception:
             pass
 
-        return Response({'message': 'Resume uploaded and parsed successfully.', 'resume_id': str(resume.id), 'url': url})
+        resp_data = {
+            'message': 'Resume uploaded and parsed successfully.',
+            'resume_id': str(resume.id),
+            'url': url,
+        }
+        if not b2_upload_ok:
+            resp_data['warning'] = 'Cloud storage upload failed; file stored locally.'
+
+        return Response(resp_data)
 
 
 class CreateApplicationView(APIView):
@@ -195,7 +227,7 @@ class ApplicationListView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
     def get(self, request):
-        qs = Application.objects.select_related('user', 'job_role').all()
+        qs = Application.objects.select_related('user', 'job_role').prefetch_related('tests').all()
 
         search = request.query_params.get('search')
         if search:
@@ -231,10 +263,18 @@ class ApplicationDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            app = Application.objects.select_related('user', 'job_role').get(pk=pk)
+            app = Application.objects.select_related('user', 'job_role').prefetch_related('tests').get(pk=pk)
         except Application.DoesNotExist:
             return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(ApplicationDetailSerializer(app).data)
+
+    def delete(self, request, pk):
+        try:
+            app = Application.objects.get(pk=pk)
+            app.delete()
+            return Response({'message': 'Application deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class UpdateApplicationStatusView(APIView):
@@ -253,4 +293,34 @@ class UpdateApplicationStatusView(APIView):
 
         app.status = serializer.validated_data['status']
         app.save(update_fields=['status'])
+
+        # Auto-generate tests if advancing to testing rounds
+        if app.status == ApplicationStatus.APTITUDE_ROUND:
+            if not Test.objects.filter(application=app, test_type=TestType.APTITUDE).exists():
+                questions = list(Question.objects.filter(type=QuestionType.MCQ).order_by('?')[:10])
+                if questions:
+                    test = Test.objects.create(
+                        test_type=TestType.APTITUDE,
+                        user=app.user,
+                        application=app,
+                        total_questions=len(questions)
+                    )
+                    TestAnswer.objects.bulk_create([
+                        TestAnswer(test=test, question=q) for q in questions
+                    ])
+        elif app.status == ApplicationStatus.TECHNICAL_ROUND:
+            if not Test.objects.filter(application=app, test_type=TestType.TECHNICAL).exists():
+                # For technical round, pull 2 programming questions
+                questions = list(Question.objects.filter(type=QuestionType.PROGRAMMING).order_by('?')[:2])
+                if questions:
+                    test = Test.objects.create(
+                        test_type=TestType.TECHNICAL,
+                        user=app.user,
+                        application=app,
+                        total_questions=len(questions)
+                    )
+                    TestAnswer.objects.bulk_create([
+                        TestAnswer(test=test, question=q) for q in questions
+                    ])
+
         return Response({'message': 'Application status updated.', 'status': app.status})

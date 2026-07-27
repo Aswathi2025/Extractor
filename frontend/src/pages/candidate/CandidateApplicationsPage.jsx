@@ -85,8 +85,8 @@ const CandidateApplicationsPage = () => {
                           <i className="bi bi-briefcase fs-5"></i>
                         </div>
                         <div>
-                          <h6 className="mb-0 fw-bold text-dark">{app.job_role?.title || 'Unknown Job'}</h6>
-                          <div className="text-muted small">{app.job_role?.min_experience}+ Years Experience</div>
+                          <h6 className="mb-0 fw-bold text-dark">{app.job_title || 'Unknown Job'}</h6>
+                          <div className="text-muted small">{app.min_experience != null ? `${app.min_experience}+ Years Experience` : ''}</div>
                         </div>
                       </div>
                     </td>

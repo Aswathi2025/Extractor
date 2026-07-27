@@ -50,7 +50,7 @@ const CandidateTestsPage = () => {
                     {test.test_type === 'TECHNICAL' ? 'Technical Round' : 'Aptitude Round'}
                   </div>
                   <h5 className="fw-bold text-dark mb-1">
-                    {test.application?.job_role?.title || 'Assessment Test'}
+                    {test.job_title || test.application?.job_role?.title || 'Assessment Test'}
                   </h5>
                   <p className="small text-muted mb-4">Assigned {moment(test.assigned_at).fromNow()}</p>
                   

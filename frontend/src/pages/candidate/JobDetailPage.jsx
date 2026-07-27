@@ -23,7 +23,7 @@ const JobDetailPage = () => {
   const myApplications = myAppsData?.data || [];
   const isAlreadyApplied = myApplications.some(app => app.job_role_id === id);
 
-  const currentResumeUrl = currentResumeData?.data?.url;
+  const currentResumeUrl = currentResumeData?.resume_url;
   const hasExistingResume = !!currentResumeUrl;
 
   useEffect(() => {
@@ -61,12 +61,21 @@ const JobDetailPage = () => {
     if (!file) return;
 
     setSelectedFile(file);
+
+    // Create a local blob URL for instant PDF preview
+    const blobUrl = URL.createObjectURL(file);
+    setUploadedResumeUrl(blobUrl);
+
     const formData = new FormData();
     formData.append('file', file);
 
     uploadResume(formData, {
       onSuccess: (res) => {
-        setUploadedResumeUrl(res.data.url);
+        // If the server returns a valid URL, use it; otherwise keep the blob URL
+        if (res.data.url) {
+          URL.revokeObjectURL(blobUrl);
+          setUploadedResumeUrl(res.data.url);
+        }
       }
     });
   };
@@ -230,20 +239,25 @@ const JobDetailPage = () => {
 
               {activePreviewUrl && !isUploading && (
                 <div className="mb-4">
-                  <label className="form-label fw-semibold small">Resume Preview</label>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <label className="form-label fw-semibold small mb-0">Resume Preview</label>
+                    <a href={activePreviewUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary rounded-pill">
+                      <i className="bi bi-box-arrow-up-right me-1"></i>Open in New Tab
+                    </a>
+                  </div>
                   <div className="border rounded bg-light overflow-hidden" style={{ height: '400px' }}>
                     <object
                       data={activePreviewUrl}
                       type="application/pdf"
                       width="100%"
                       height="100%"
-                      style={{ minHeight: '400px' }}
+                      style={{ border: 'none', minHeight: '400px' }}
                     >
                       <div className="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
-                        <i className="bi bi-file-earmark-pdf fs-1 mb-2"></i>
-                        <p className="mb-2">Preview unavailable</p>
-                        <a href={activePreviewUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-primary rounded-pill">
-                          View Resume
+                        <i className="bi bi-file-earmark-pdf fs-1 text-danger mb-2"></i>
+                        <p className="small mb-2">PDF preview not available in this browser.</p>
+                        <a href={activePreviewUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-primary rounded-pill px-3">
+                          <i className="bi bi-download me-1"></i>Download Resume
                         </a>
                       </div>
                     </object>

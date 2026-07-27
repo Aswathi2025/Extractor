@@ -53,11 +53,16 @@ const TestTakingPage = () => {
   };
 
   const confirmSubmit = () => {
-    const payload = Object.entries(answers).map(([answerId, data]) => ({
-      answerId,
-      selectedAnswer: data.selectedAnswer || data.code || '',
-      language: data.language || null
-    }));
+    if (!test?.answers) return;
+
+    const payload = test.answers.map(ans => {
+      const stateAns = answers[ans.id] || {};
+      return {
+        answer_id: ans.id,
+        selected_answer: stateAns.code ?? stateAns.selectedAnswer ?? ans.selected_answer ?? '',
+        language: stateAns.language ?? ans.language ?? ''
+      };
+    });
 
     submitTest({ id: test.id, answers: payload }, {
       onSuccess: () => {
@@ -67,8 +72,24 @@ const TestTakingPage = () => {
     });
   };
 
-  const isAllAnswered = test.answers?.length > 0 && Object.keys(answers).length === test.answers.length && 
-    Object.values(answers).every(a => (a.selectedAnswer || (a.code && a.language)));
+  const getAnsweredCount = () => {
+    if (!test?.answers) return 0;
+    return test.answers.filter(ans => {
+      const stateAns = answers[ans.id] || {};
+      if (ans.question?.type === 'PROGRAMMING') {
+        const code = stateAns.code ?? stateAns.selectedAnswer ?? ans.selected_answer ?? '';
+        const lang = stateAns.language ?? ans.language ?? '';
+        return code.trim().length > 0 && lang.trim().length > 0;
+      } else {
+        const selected = stateAns.selectedAnswer ?? ans.selected_answer ?? '';
+        return selected.trim().length > 0;
+      }
+    }).length;
+  };
+
+  const answeredCount = getAnsweredCount();
+  const totalQuestionsCount = test?.answers?.length || test?.total_questions || 0;
+  const isAllAnswered = totalQuestionsCount > 0 && answeredCount === totalQuestionsCount;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -76,10 +97,9 @@ const TestTakingPage = () => {
         <button className="btn btn-light rounded-circle p-2 d-flex shadow-sm" onClick={() => navigate('/tests')}>
           <i className="bi bi-arrow-left fs-5"></i>
         </button>
-        <div>
-          <h4 className="fw-bold tracking-tight text-dark mb-0">Assessment Test</h4>
-          <p className="text-muted mb-0 small">Answer all questions carefully before submitting.</p>
-        </div>
+          <h4 className="fw-bold tracking-tight text-dark mb-0">
+            {test?.job_title ? `${test.job_title} — Assessment` : 'Assessment Test'}
+          </h4>
       </div>
 
       {test.is_completed ? (
@@ -118,9 +138,9 @@ const TestTakingPage = () => {
         <div className="bg-white rounded-4 border shadow-sm overflow-hidden mb-5">
           <div className="p-4 border-bottom bg-light">
             <div className="d-flex justify-content-between align-items-center">
-              <span className="fw-bold text-dark">Questions ({test.total_questions})</span>
+              <span className="fw-bold text-dark">Questions ({totalQuestionsCount})</span>
               <span className="badge bg-primary rounded-pill px-3 py-2">
-                {Object.keys(answers).length} / {test.total_questions} Answered
+                {answeredCount} / {totalQuestionsCount} Answered
               </span>
             </div>
           </div>
@@ -139,7 +159,7 @@ const TestTakingPage = () => {
                       <label className="form-label small fw-bold text-dark">Select Language</label>
                       <select 
                         className="form-select bg-light border-light shadow-sm"
-                        value={answers[ans.id]?.language || ''}
+                        value={answers[ans.id]?.language ?? ans.language ?? ''}
                         onChange={(e) => handleProgrammingChange(ans.id, 'language', e.target.value)}
                         style={{ maxWidth: '200px' }}
                       >
@@ -157,7 +177,7 @@ const TestTakingPage = () => {
                         className="form-control bg-light border-light shadow-sm"
                         rows="12"
                         placeholder="Write your code..."
-                        value={answers[ans.id]?.code || ''}
+                        value={answers[ans.id]?.code ?? answers[ans.id]?.selectedAnswer ?? ans.selected_answer ?? ''}
                         onChange={(e) => handleProgrammingChange(ans.id, 'code', e.target.value)}
                         style={{ fontFamily: 'monospace', resize: 'vertical' }}
                       ></textarea>
@@ -167,7 +187,8 @@ const TestTakingPage = () => {
                   <div className="d-flex flex-column gap-3 ms-md-4 mt-3">
                     {['option_a', 'option_b', 'option_c', 'option_d'].map((optKey) => {
                       const optValue = ans.question[optKey];
-                      const isSelected = answers[ans.id]?.selectedAnswer === optValue;
+                      const currentSel = answers[ans.id]?.selectedAnswer ?? ans.selected_answer ?? '';
+                      const isSelected = currentSel === optValue;
                       return (
                         <label 
                           key={optKey} 

@@ -147,11 +147,30 @@ class UserResumeView(APIView):
 
         resume = Resume.objects.filter(user=user).order_by('-uploaded_at').first()
         if not resume:
-            return Response({'resume_url': None})
+            return Response({'url': None, 'analysis': None})
 
+        url = None
         try:
             url = generate_b2_presigned_url(resume.file)
-            return Response({'resume_url': url})
         except Exception as e:
             logger.error(f'Presigned URL error: {e}')
-            return Response({'error': 'Could not generate URL.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        analysis_data = None
+        if hasattr(resume, 'analysis'):
+            analysis = resume.analysis
+            analysis_data = {
+                'extracted_name': analysis.extracted_name,
+                'extracted_email': analysis.extracted_email,
+                'extracted_phone': analysis.extracted_phone,
+                'extracted_website': analysis.extracted_website,
+                'extracted_linkedin': analysis.extracted_linkedin,
+                'extracted_github': analysis.extracted_github,
+                'education': analysis.education,
+                'experience': analysis.experience,
+                'projects': analysis.projects,
+                'certifications': analysis.certifications,
+                'summary': analysis.summary,
+                'extracted_skills': analysis.extracted_skills,
+            }
+
+        return Response({'url': url, 'analysis': analysis_data})

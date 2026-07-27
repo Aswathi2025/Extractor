@@ -40,15 +40,15 @@ export const useSubmitTest = () => {
 export const useEvaluateTest = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id) => testsApi.evaluateTest(id),
+    mutationFn: ({ id, score }) => testsApi.evaluateTest(id, score !== undefined ? { score } : {}),
     onSuccess: (res, variables) => {
-      // Invalidate the applications queries so the new score shows up in the admin dashboard immediately
       qc.invalidateQueries({ queryKey: ['applications'] });
-      qc.invalidateQueries({ queryKey: ['admin-test', variables] });
-      toast.success('Test evaluated successfully using AI!');
+      qc.invalidateQueries({ queryKey: ['application'] });
+      qc.invalidateQueries({ queryKey: ['admin-test', variables.id] });
+      toast.success('Test score updated successfully!');
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Failed to evaluate test');
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'Failed to evaluate test');
     }
   });
 };

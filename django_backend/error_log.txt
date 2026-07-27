@@ -1,0 +1,8 @@
+Exception on /media/resumes/17b90607-dce6-4d18-b122-e7489169cec0/Aswathi_resume_updatednew (1) (1).pdf: “C:\Users\aswat\OneDrive\Attachments\Documents\Desktop\samples\Extractor\django_backend\media\resumes\17b90607-dce6-4d18-b122-e7489169cec0\Aswathi_resume_updatednew (1) (1).pdf” does not exist
+Traceback (most recent call last):
+  File "C:\Users\aswat\AppData\Local\Programs\Python\Python314\Lib\site-packages\django\core\handlers\base.py", line 198, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "C:\Users\aswat\AppData\Local\Programs\Python\Python314\Lib\site-packages\django\views\static.py", line 51, in serve
+    raise Http404(_("“%(path)s” does not exist") % {"path": fullpath})
+django.http.response.Http404: “C:\Users\aswat\OneDrive\Attachments\Documents\Desktop\samples\Extractor\django_backend\media\resumes\17b90607-dce6-4d18-b122-e7489169cec0\Aswathi_resume_updatednew (1) (1).pdf” does not exist
+

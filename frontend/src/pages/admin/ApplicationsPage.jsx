@@ -20,11 +20,18 @@ const ApplicationsPage = () => {
   const [interviewTime, setInterviewTime] = useState('');
 
   const { data: fetchedAppDetails, isFetching: isFetchingAppDetails } = useApplication(selectedApplication?.id);
-  const { data: resumeData, refetch: fetchResume, isFetching: isFetchingResume } = useUserResume(selectedApplication?.candidate?.id);
+  const { data: resumeData, refetch: fetchResume, isFetching: isFetchingResume } = useUserResume(selectedApplication?.candidate_id);
 
   const [viewTestId, setViewTestId] = useState(null);
+  const [manualScore, setManualScore] = useState('');
   const { data: testAnswersData, isFetching: isFetchingTest } = useAdminTestById(viewTestId);
   const { mutate: evaluateTest, isPending: isEvaluatingTest } = useEvaluateTest();
+
+  useEffect(() => {
+    if (testAnswersData) {
+      setManualScore(testAnswersData.score !== null && testAnswersData.score !== undefined ? String(testAnswersData.score) : '');
+    }
+  }, [testAnswersData]);
 
   const activeApp = fetchedAppDetails ? { ...fetchedAppDetails, status: selectedApplication?.status } : selectedApplication;
 
@@ -180,15 +187,15 @@ const ApplicationsPage = () => {
                     <td className="py-3 px-4">
                       <div className="d-flex align-items-center gap-3">
                         <div className="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style={{width: '40px', height: '40px'}}>
-                          {app.candidate?.username?.charAt(0).toUpperCase()}
+                          {app.candidate_name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="fw-bold text-dark">{app.candidate?.username}</div>
-                          <div className="text-muted small">{app.candidate?.email}</div>
+                          <div className="fw-bold text-dark">{app.candidate_name}</div>
+                          <div className="text-muted small">{app.candidate_email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-dark fw-medium">{app.job_role?.title}</td>
+                    <td className="py-3 px-4 text-dark fw-medium">{app.job_title}</td>
                     <td className="py-3 px-4">
                       {app.match_score !== null ? (
                         <span className={`badge ${app.match_score >= 80 ? 'bg-success' : app.match_score >= 50 ? 'bg-warning' : 'bg-danger'}`}>
@@ -550,15 +557,23 @@ const ApplicationsPage = () => {
                         )}
                         {resumeTab === 'original' && (
                           <div className="rounded-4 overflow-hidden border shadow-sm" style={{ height: '550px' }}>
-                            <object data={resumeData.url} type="application/pdf" width="100%" height="100%">
+                            {resumeData.url ? (
+                              <object data={resumeData.url} type="application/pdf" width="100%" height="100%">
+                                <div className="d-flex flex-column align-items-center justify-content-center h-100 text-muted bg-light">
+                                  <i className="bi bi-file-earmark-pdf display-1 mb-3 text-secondary"></i>
+                                  <p className="mb-3 fw-medium">Browser preview unavailable</p>
+                                  <a href={resumeData.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary rounded-pill px-4 shadow-sm">
+                                    <i className="bi bi-download me-2"></i>Download PDF
+                                  </a>
+                                </div>
+                              </object>
+                            ) : (
                               <div className="d-flex flex-column align-items-center justify-content-center h-100 text-muted bg-light">
-                                <i className="bi bi-file-earmark-pdf display-1 mb-3 text-secondary"></i>
-                                <p className="mb-3 fw-medium">Browser preview unavailable</p>
-                                <a href={resumeData.url} target="_blank" rel="noopener noreferrer" className="btn btn-primary rounded-pill px-4 shadow-sm">
-                                  <i className="bi bi-download me-2"></i>Download PDF
-                                </a>
+                                <i className="bi bi-file-earmark-break display-1 mb-3 text-secondary opacity-50"></i>
+                                <h5 className="fw-bold text-dark">PDF Unavailable</h5>
+                                <p className="mb-0 text-center px-4">The original PDF document could not be loaded from cloud storage.</p>
                               </div>
-                            </object>
+                            )}
                           </div>
                         )}
                       </>
@@ -648,22 +663,43 @@ const ApplicationsPage = () => {
               <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
                 <h5 className="fw-bold text-dark mb-0">Test Results</h5>
                 <div className="d-flex align-items-center gap-3">
-                  {testAnswersData.test_type === 'TECHNICAL' && testAnswersData.score === null && (
-                    <button 
-                      className="btn btn-primary rounded-pill px-4 shadow-sm fw-medium d-flex align-items-center gap-2"
-                      onClick={() => evaluateTest(testAnswersData.id)}
-                      disabled={isEvaluatingTest}
-                    >
-                      <i className="bi bi-robot"></i> Evaluate with AI
-                    </button>
+                  {testAnswersData.test_type === 'TECHNICAL' && (
+                    <div className="d-flex align-items-center gap-2">
+                      <div className="input-group input-group-sm" style={{ width: '130px' }}>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="100"
+                          className="form-control rounded-start-pill shadow-none px-3" 
+                          placeholder="Score %" 
+                          value={manualScore}
+                          onChange={(e) => setManualScore(e.target.value)}
+                        />
+                        <button 
+                          className="btn btn-outline-primary rounded-end-pill px-2 fw-medium"
+                          type="button"
+                          onClick={() => evaluateTest({ id: testAnswersData.id, score: manualScore })}
+                          disabled={isEvaluatingTest || manualScore === ''}
+                        >
+                          Save
+                        </button>
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-primary rounded-pill px-3 shadow-sm fw-medium d-flex align-items-center gap-1"
+                        onClick={() => evaluateTest({ id: testAnswersData.id })}
+                        disabled={isEvaluatingTest}
+                      >
+                        <i className="bi bi-robot me-1"></i> {testAnswersData.score === null || testAnswersData.score === undefined ? 'Evaluate AI' : 'Re-Evaluate AI'}
+                      </button>
+                    </div>
                   )}
-                  {testAnswersData.score !== null ? (
+                  {testAnswersData.score !== null && testAnswersData.score !== undefined ? (
                     <div className={`fs-3 fw-bold ${testAnswersData.score >= 70 ? 'text-success' : 'text-danger'}`}>
                       {Number(testAnswersData.score).toFixed(0)}%
                     </div>
                   ) : (
-                    <div className="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fs-6">
-                      Pending Review
+                    <div className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill fs-6">
+                      Needs Review
                     </div>
                   )}
                 </div>

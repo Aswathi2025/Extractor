@@ -56,7 +56,7 @@ const JobsPage = () => {
     }
 
     generateDescription(
-      { title, skills, minExperience, minEducation },
+      { title, skill_ids: skillIds, min_experience: minExperience, min_education: minEducation },
       {
         onSuccess: (res) => {
           setValue('description', res.data.description, { shouldValidate: true });

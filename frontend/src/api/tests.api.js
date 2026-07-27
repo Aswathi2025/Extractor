@@ -5,5 +5,5 @@ export const testsApi = {
   getTestById: (id) => axiosInstance.get(`/tests/${id}`),
   getAdminTestById: (id) => axiosInstance.get(`/tests/admin/${id}`),
   submitTestAnswers: (id, answers) => axiosInstance.put(`/tests/${id}/submit`, { answers }),
-  evaluateTest: (id) => axiosInstance.post(`/tests/${id}/evaluate`)
+  evaluateTest: (id, payload) => axiosInstance.post(`/tests/${id}/evaluate`, payload || {})
 };

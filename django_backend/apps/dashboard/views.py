@@ -61,19 +61,43 @@ class CandidateDashboardView(APIView):
         applications = Application.objects.filter(user=user)
         tests = Test.objects.filter(user=user)
 
+        # Recent applications (last 5) with job_role info
+        recent_apps = (
+            applications.select_related('job_role')
+            .order_by('-applied_at')[:5]
+        )
+        recent_applications = [
+            {
+                'id': str(app.id),
+                'status': app.status,
+                'applied_at': app.applied_at,
+                'match_score': app.match_score,
+                'job_role': {
+                    'title': app.job_role.title,
+                    'min_experience': app.job_role.min_experience,
+                } if app.job_role else None,
+            }
+            for app in recent_apps
+        ]
+
+        scores = list(
+            tests.filter(is_completed=True, score__isnull=False)
+            .values_list('score', flat=True)
+        )
+        average_test_score = round(sum(scores) / len(scores), 2) if scores else None
+
         stats = {
-            'total_applications': applications.count(),
-            'pending': applications.filter(status=ApplicationStatus.PENDING).count(),
+            'totalApplications': applications.count(),
+            'pendingApplications': applications.filter(
+                status__in=[ApplicationStatus.PENDING, ApplicationStatus.REVIEWED]
+            ).count(),
             'accepted': applications.filter(status=ApplicationStatus.ACCEPTED).count(),
             'rejected': applications.filter(status=ApplicationStatus.REJECTED).count(),
-            'total_tests': tests.count(),
-            'completed_tests': tests.filter(is_completed=True).count(),
-            'average_test_score': (
-                tests.filter(is_completed=True, score__isnull=False)
-                .values_list('score', flat=True)
-            ),
+            'totalTests': tests.count(),
+            'completedTests': tests.filter(is_completed=True).count(),
+            'averageTestScore': average_test_score,
+            'recentApplications': recent_applications,
         }
-        scores = list(stats.pop('average_test_score'))
-        stats['average_test_score'] = round(sum(scores) / len(scores), 2) if scores else None
 
         return Response(stats)
+

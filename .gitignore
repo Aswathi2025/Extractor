@@ -1,0 +1,12 @@
+.env
+*.env
+.env.*
+django_backend/.env
+frontend/.env
+error_log.txt
+django_backend/media/
+django_backend/error_log.txt
+node_modules/
+dist/
+__pycache__/
+*.pyc

@@ -70,3 +70,18 @@ export const useUpdateApplicationStatus = () => {
     }
   });
 };
+
+export const useDeleteApplication = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: applicationsApi.deleteApplication,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['applications'] });
+      qc.invalidateQueries({ queryKey: ['my-applications'] });
+      toast.success('Application deleted successfully');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to delete application');
+    }
+  });
+};

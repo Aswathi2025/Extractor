@@ -19,3 +19,7 @@ export const createApplication = (data) => {
 export const updateApplicationStatus = (id, payload) => {
   return axiosInstance.put(`/applications/${id}/status`, payload);
 };
+
+export const deleteApplication = (id) => {
+  return axiosInstance.delete(`/applications/${id}`);
+};
