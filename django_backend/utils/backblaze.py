@@ -17,48 +17,14 @@ _b2_client = None
 def _get_client():
     global _b2_client
     if _b2_client is None:
-        is_placeholder = (
-            not settings.BACKBLAZE_KEY_ID
-            or settings.BACKBLAZE_KEY_ID == '005ec6ab736d49700000000029'
-            or not settings.BACKBLAZE_APP_KEY
-            or settings.BACKBLAZE_APP_KEY == 'K005lCZkbVkGZyCKQZJPRCZdHavJ4I4'
+        _b2_client = boto3.client(
+            's3',
+            endpoint_url=f'https://{settings.BACKBLAZE_ENDPOINT}' if not settings.BACKBLAZE_ENDPOINT.startswith('http') else settings.BACKBLAZE_ENDPOINT,
+            region_name=settings.BACKBLAZE_REGION,
+            aws_access_key_id=settings.BACKBLAZE_KEY_ID,
+            aws_secret_access_key=settings.BACKBLAZE_APP_KEY,
+            config=Config(signature_version='s3v4'),
         )
-        if is_placeholder:
-            # Mock client — saves to local MEDIA_ROOT when no real credentials are configured
-            import os
-            class MockClient:
-                def put_object(self, **kwargs):
-                    key = kwargs.get('Key')
-                    buffer = kwargs.get('Body')
-                    file_path = os.path.join(settings.MEDIA_ROOT, key)
-                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                    with open(file_path, 'wb') as f:
-                        f.write(buffer)
-
-                def delete_object(self, **kwargs):
-                    key = kwargs.get('Key')
-                    file_path = os.path.join(settings.MEDIA_ROOT, key)
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-
-                def generate_presigned_url(self, *args, **kwargs):
-                    params = kwargs.get('Params', {})
-                    key = params.get('Key', '')
-                    file_path = os.path.join(settings.MEDIA_ROOT, key)
-                    if not os.path.exists(file_path):
-                        return None
-                    return f"http://localhost:5000{settings.MEDIA_URL}{key}"
-            
-            _b2_client = MockClient()
-        else:
-            _b2_client = boto3.client(
-                's3',
-                endpoint_url=f'https://{settings.BACKBLAZE_ENDPOINT}' if not settings.BACKBLAZE_ENDPOINT.startswith('http') else settings.BACKBLAZE_ENDPOINT,
-                region_name=settings.BACKBLAZE_REGION,
-                aws_access_key_id=settings.BACKBLAZE_KEY_ID,
-                aws_secret_access_key=settings.BACKBLAZE_APP_KEY,
-                config=Config(signature_version='s3v4'),
-            )
     return _b2_client
 
 
@@ -89,14 +55,6 @@ def delete_from_b2(key: str) -> bool:
 
 def generate_b2_public_url(key: str) -> str:
     """Generate a public URL for a file (bucket must be public)."""
-    is_placeholder = (
-        not settings.BACKBLAZE_KEY_ID
-        or settings.BACKBLAZE_KEY_ID == '005ec6ab736d49700000000029'
-        or not settings.BACKBLAZE_APP_KEY
-        or settings.BACKBLAZE_APP_KEY == 'K005lCZkbVkGZyCKQZJPRCZdHavJ4I4'
-    )
-    if is_placeholder:
-        return f"http://localhost:5000{settings.MEDIA_URL}{key}"
     endpoint = settings.BACKBLAZE_ENDPOINT.rstrip('/')
     if not endpoint.startswith('http'):
         endpoint = f'https://{endpoint}'
