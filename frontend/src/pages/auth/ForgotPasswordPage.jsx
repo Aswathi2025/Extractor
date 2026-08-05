@@ -12,38 +12,54 @@ const ForgotPasswordPage = () => {
   const { mutate: forgot, isPending, isSuccess } = useForgotPassword();
 
   return (
-    <AuthLayout 
-      title="Reset Password" 
-      subtitle="Enter your email and we'll send a reset link."
+    <AuthLayout
+      title="Reset Password"
+      subtitle="Enter your email and we'll send you a reset link."
     >
       {isSuccess ? (
-        <div className="alert alert-success border-success bg-success-subtle text-success small fw-bold p-3 rounded-3 d-flex align-items-center">
-          <i className="bi bi-check-circle-fill fs-5 me-2"></i>
+        <div className="auth-success-alert" style={{ animationDelay: '0.2s' }}>
+          <i className="bi bi-check-circle-fill me-2" />
           Check your inbox for the reset link!
         </div>
       ) : (
-        <form onSubmit={handleSubmit((d) => forgot(d))}>
-          <div className="mb-4">
-            <label className="form-label small fw-bold text-dark text-uppercase tracking-wide">Email</label>
-            <div className="position-relative">
-              <i className="bi bi-envelope position-absolute top-50 translate-middle-y text-muted ms-3"></i>
-              <input 
-                type="email" 
-                className={`form-control form-control-lg input-float ps-5 ${errors.email ? 'is-invalid border-danger' : ''}`} 
-                style={{fontSize: '0.95rem'}} 
-                placeholder="name@company.com" 
-                {...register('email')} 
+        <form onSubmit={handleSubmit((d) => forgot(d))} noValidate>
+          <div className="auth-field-group" style={{ animationDelay: '0.2s' }}>
+            <label className="auth-label">Email</label>
+            <div className="auth-input-wrap">
+              <i className="bi bi-envelope auth-input-icon" />
+              <input
+                type="email"
+                className={`auth-input${errors.email ? ' auth-input-error' : ''}`}
+                placeholder="name@company.com"
+                {...register('email')}
               />
             </div>
-            {errors.email && <div className="text-danger small mt-1 fw-medium"><i className="bi bi-exclamation-circle me-1"></i>{errors.email.message}</div>}
+            {errors.email && (
+              <div className="auth-error-msg">
+                <i className="bi bi-exclamation-circle me-1" />{errors.email.message}
+              </div>
+            )}
           </div>
-          <button type="submit" className="btn btn-glow w-100 py-3 mb-4 fw-bold rounded-3 text-uppercase tracking-wide fs-6" disabled={isPending}>
-            {isPending ? <><span className="spinner-border spinner-border-sm me-2"></span>Sending...</> : 'Send Reset Link'}
+
+          <button
+            type="submit"
+            className="auth-btn-primary"
+            disabled={isPending}
+            style={{ animationDelay: '0.3s' }}
+          >
+            {isPending ? (
+              <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />Sending...</>
+            ) : (
+              <><i className="bi bi-send me-2" />Send Reset Link</>
+            )}
           </button>
         </form>
       )}
-      <p className="text-center text-muted fw-medium mb-0">
-        <Link to="/login" className="text-primary fw-bold text-decoration-none hover-underline"><i className="bi bi-arrow-left me-1"></i>Back to Login</Link>
+
+      <p className="auth-footer-text" style={{ animationDelay: '0.35s' }}>
+        <Link to="/login" className="auth-footer-link">
+          <i className="bi bi-arrow-left me-1" />Back to Login
+        </Link>
       </p>
     </AuthLayout>
   );

@@ -14,15 +14,21 @@ const schema = yup.object({
   confirmPassword: yup.string().oneOf([yup.ref('password')], 'Passwords must match').required('Confirm Password is required'),
 });
 
+const fields = [
+  { name: 'name',            label: 'Full Name',        type: 'text',     icon: 'bi-person',    delay: '0.2s' },
+  { name: 'email',           label: 'Email Address',    type: 'email',    icon: 'bi-envelope',  delay: '0.25s' },
+  { name: 'password',        label: 'Password',         type: 'password', icon: 'bi-lock',      delay: '0.3s' },
+  { name: 'confirmPassword', label: 'Confirm Password', type: 'password', icon: 'bi-lock-fill', delay: '0.35s' },
+];
+
 const RegisterPage = () => {
   const [registeredUser, setRegisteredUser] = useState(null);
   const [showOtpModal, setShowOtpModal] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: yupResolver(schema) });
-  
+
   const { mutate: doRegister, isPending } = useRegister({
     onSuccess: (res) => {
-      // Backend returns: { success: true, message: '...', data: { id, email, name } }
       const responseData = res?.data || res;
       const userData = responseData?.data || responseData;
       if (userData) {
@@ -36,39 +42,47 @@ const RegisterPage = () => {
 
   return (
     <>
-      <AuthLayout 
-        title="Create account" 
+      <AuthLayout
+        title="Create Account"
         subtitle="Join Extractor to streamline your hiring process."
       >
-        <form onSubmit={handleSubmit(onSubmit)}>
-          {[
-            { name: 'name', label: 'Full Name', type: 'text', icon: 'bi-person' },
-            { name: 'email', label: 'Email Address', type: 'email', icon: 'bi-envelope' },
-            { name: 'password', label: 'Password', type: 'password', icon: 'bi-lock' },
-            { name: 'confirmPassword', label: 'Confirm Password', type: 'password', icon: 'bi-lock-fill' },
-          ].map(({ name, label, type, icon }) => (
-            <div className="mb-4" key={name}>
-              <label className="form-label small fw-bold text-dark text-uppercase tracking-wide">{label}</label>
-              <div className="position-relative">
-                <i className={`bi ${icon} position-absolute top-50 translate-middle-y text-muted ms-3`}></i>
-                <input 
-                  type={type} 
-                  className={`form-control form-control-lg input-float ps-5 ${errors[name] ? 'is-invalid border-danger' : ''}`} 
-                  style={{fontSize: '0.95rem'}} 
-                  {...register(name)} 
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          {fields.map(({ name, label, type, icon, delay }) => (
+            <div className="auth-field-group" key={name} style={{ animationDelay: delay }}>
+              <label className="auth-label">{label}</label>
+              <div className="auth-input-wrap">
+                <i className={`bi ${icon} auth-input-icon`} />
+                <input
+                  type={type}
+                  className={`auth-input${errors[name] ? ' auth-input-error' : ''}`}
+                  {...register(name)}
                 />
               </div>
-              {errors[name] && <div className="text-danger small mt-1 fw-medium"><i className="bi bi-exclamation-circle me-1"></i>{errors[name].message}</div>}
+              {errors[name] && (
+                <div className="auth-error-msg">
+                  <i className="bi bi-exclamation-circle me-1" />{errors[name].message}
+                </div>
+              )}
             </div>
           ))}
-          
-          <button type="submit" className="btn btn-glow w-100 py-3 mt-2 mb-4 fw-bold rounded-3 text-uppercase tracking-wide fs-6" disabled={isPending}>
-            {isPending ? <><span className="spinner-border spinner-border-sm me-2"></span>Registering...</> : 'Create account'}
+
+          <button
+            type="submit"
+            className="auth-btn-primary"
+            disabled={isPending}
+            style={{ animationDelay: '0.4s' }}
+          >
+            {isPending ? (
+              <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />Registering...</>
+            ) : (
+              <><i className="bi bi-person-plus me-2" />Create Account</>
+            )}
           </button>
         </form>
-        
-        <p className="text-center text-muted fw-medium mb-0">
-          Already have an account? <Link to="/login" className="text-primary fw-bold text-decoration-none ms-1 hover-underline">Sign In</Link>
+
+        <p className="auth-footer-text" style={{ animationDelay: '0.45s' }}>
+          Already have an account?{' '}
+          <Link to="/login" className="auth-footer-link">Sign In</Link>
         </p>
       </AuthLayout>
 
